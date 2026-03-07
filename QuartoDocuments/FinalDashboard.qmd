@@ -3,7 +3,6 @@ title: "Puget Sound Vanpool and Transit Data"
 format: dashboard
 ---
 
-
 ```{r}
 
 # loading libraries
@@ -47,7 +46,7 @@ joinedData <- joinedData %>%
 
 ```
 
-# Home 
+# Home
 
 ## Row {height="60%"}
 
@@ -111,7 +110,7 @@ scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = ci
 ggplotly(scatterData, tooltip = c("text","x","y"))
 ```
 
-# About The Data 
+# About The Data
 
 ```{r}
 #| title: Churn Reason
@@ -120,5 +119,66 @@ ggplotly(scatterData, tooltip = c("text","x","y"))
 
 ```{r}
 #| title: Contracts by State
+
+```
+
+Per capita data and visualizations
+
+```{r}
+
+populationcensus <- read.csv("../data/Washington_DemographicsByCityProcessed.csv")
+
+# get just the city names
+populationcensus <- populationcensus |>
+  mutate(name = str_remove_all(name, "(?i)\\s+(city|town)"))
+
+populationcensus <- populationcensus |>
+  mutate(name = str_remove_all(name, " CDP"))
+
+populationcensus <- populationcensus |> select(name, population)
+
+populationcensus <- populationcensus |> 
+  mutate(population = parse_number(population))
+
+joinedData <- left_join(joinedData, populationcensus, by = c("city_name" = "name"))
+
+# removing outlier cities/bad data
+joinedData <- joinedData |> filter(city_name != "Oso")
+joinedData <- joinedData |> filter(city_name != "Ravensdale")
+
+# vanpools and bus stops per cap people
+joinedData <- joinedData |> mutate(vanpools_per_cap = num_vanpools / population)
+
+joinedData <- joinedData |> mutate(busstops_per_cap = num_stops / population)
+
+# normalize both the bus stops and vanpool columns to get
+# a vanpool and bus stop score for each city
+
+max_vanpools <- joinedData |> pull(vanpools_per_cap) |> max(na.rm = TRUE)
+max_busstops <- joinedData |> pull(busstops_per_cap) |> max(na.rm = TRUE)
+
+joinedData <- joinedData |> mutate(bus_score = round((busstops_per_cap / max_busstops) * 100, digits = 2))
+joinedData <- joinedData |> mutate(van_score = round((vanpools_per_cap / max_vanpools) * 100, digits = 2))
+
+joinedData <- joinedData |> select(-busstops_per_cap)
+joinedData <- joinedData |> select(-vanpools_per_cap)
+
+joinedData <- joinedData |> 
+  filter(!is.na(population))
+
+
+# Cities with biger populations have bigger circles
+corr_plot <- ggplot(joinedData, aes(x = bus_score, y = van_score, size = population, text = city_name)) +
+  geom_point(alpha = 0.4, color = "dodgerblue") +
+  scale_size_continuous(range = c(.5, 7.5)) +
+  labs(
+    title = "Transit Score Correlation",
+    x = "Bus Stop Score (0-100)",
+    y = "Vanpool Score (0-100)"
+  ) +
+  theme_minimal()
+
+ggplotly(corr_plot, tooltip = c("text", "x", "y", "size"))
+
 
 ```
