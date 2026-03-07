@@ -1,0 +1,321 @@
+---
+title: "Vanpool vs. Bus Data Analysis"
+author: "Abdinasir Yussuf, Vish Venugopal"
+editor: visual
+format:
+  html:
+   embed-resources: true
+---
+
+# Section I Vanpool Dataset:
+
+### Data Source:
+
+**Vanpool:** [Vanpool data](https://data.kingcounty.gov/Transportation-Roads/King-County-Metro-Vanpool/pn62-amqd)
+
+-   This is from King County’s official .gov website and collected/provided by King County themselves. King County runs Vanpool, so I expect this dataset to be reliable.
+
+### Data Meaning:
+
+This dataset contains the coordinates of Vanpool trips’ starting locations and ending locations. We will be comparing it to the other dataset which contains information about buses, so that we can see if there is a correlation between Vanpool usage (we will use the trip’s starting point), and bus service quality in cities.
+
+### Data Join:
+
+We are planning to join by city. We would need to ensure that for both datasets, the city name is spelled the same. However, this should not be an issue because we are adding the city names to both datasets individually before joining them, based on the coordinates in each dataset.
+
+### Observations:
+
+The vanpool dataset includes destination and origin rows meaning there are trips being recorded in this dataset. The dataset has 10 columns the_geom, Group_ID, WorksiteNa,Address,Latitude, Longitude, City, Origin_Des, EmployerID, WorksiteID. The most important data sets we will focus on are are latitude, longitude , City and Origin_Des. The lattitude and logitude cordinates refer to the exact location of the starting point and end point of the vanpool trip. The origin_Des column refers to the corresponding trip pair. This was interesting because we removed the destinations because we were only focusing on where people were leaving from not going to. And lastly the city column which obviously shows where these trips are either starting or ending.
+
+```{r}
+#| warning: false
+
+library(plotly)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+
+vanpool_df <- read.csv("/Users/codechugger/Downloads/Vanpool.csv")
+
+
+glimpse(vanpool_df)
+```
+
+### Data Issues:
+
+Some of the entries in the Vanpool data have NA values for city, employer, etc. However none of the coordinates are NA which is most important. We can get around the NA value for the city by running the API that helps us convert a coordinate to a city, so that should not be an issue.
+
+# Section II Bus Dataset:
+
+```{r}
+
+
+
+stops_df <- read.csv("/Users/codechugger/Downloads/gtfs_puget_sound_consolidated/stops.txt")
+
+glimpse(stops_df)
+
+```
+
+### Data Source: [Puget Sound Consolidated GTFS Schedule](https://gtfs.sound.obaweb.org/prod/gtfs_puget_sound_consolidated.zip)
+
+-   *Dataset can be found and downloaded here: [Open Transit Data (OTD) \| OTD downloads \| Sound Transit](https://www.soundtransit.org/help-contacts/business-information/open-transit-data-otd/otd-downloads). This is from Sound Transit’s official website. What they have done is combine the bus data from various transit agencies across Puget Sound (ex. Snohomish County, Community Transit). All these transit agencies are run by the government and the data comes from them, so I expect it to be reliable.*
+
+### Data Meaning:
+
+This dataset has lots more data about buses than we need, but what we will be using it for is mainly to see the density of bus stops in cities. We might also use it to see the frequency of buses and number of routes, or other data. This is useful to combine with our first dataset so that we can see if the quality of bus service in a city correlates to the vanpool usage there.
+
+### Data Join:
+
+We are planning to join by city. We would need to ensure that for both datasets, the city name is spelled the same. However, this should not be an issue because we are adding the city names to both datasets individually before joining them, based on the coordinates in each dataset.
+
+### Observations:
+
+This dataset has columns for: stop ID, stop name, stop latitude, stop longitude, stop code, city name, county name, state name, zip code. The important ones for us are stop latitude and longitude, which describe the exact coordinates of each stop. City and zip code are also useful, which contain the general location of each stop. The other variables are mostly for other uses and are difficult to interpret, such as stop ID.
+
+### Data:
+
+The bus data does have a lot of empty values for miscellaneous variables that we don’t need such as stop description are empty/NA, but the important variables like the coordinates of stops are all there, so it is completely usable for us.
+
+# Section III: Joining the Data
+
+## Data Documentation:
+
+### Google Maps API using Typescript:
+
+-   Imported stops data
+
+-   created an array of stops
+
+-   iterated over the array and called the lat and lon of each stop
+
+-   added the necessary information to the json object(city name, state, zipcode, county name)
+
+-   created a json file and appended the json object to the file(gtfs_results.json)
+
+```{Typescript}
+
+
+
+// creating the results array and saving it in memory
+const results = []
+const stops: StopInfo[] = [];
+
+
+const lines = content.trim().split("\n");
+const rows = lines.map(line => line.split(","));
+
+const STOP_ID_INDEX = 0;
+const STOP_NAME_INDEX = 1;
+const LAT_INDEX = 2;
+const LONG_INDEX = 3;
+const STOP_CODE_INDEX = 4;
+
+
+// removed the headers and store the stops in an array 
+// removing the headers from the stops data
+for (const row of rows.slice(1)) {
+  const stop_id = row[STOP_ID_INDEX];
+  const stop_name = row[STOP_NAME_INDEX];
+  const stop_code = row[STOP_CODE_INDEX];
+  const stop_lat = parseFloat(row[LAT_INDEX]);
+  const stop_lon = parseFloat(row[LONG_INDEX]);
+
+  if (!isNaN(stop_lat) && !isNaN(stop_lon)) {
+    stops.push({ stop_id, stop_name,stop_lat, stop_lon, stop_code });
+  }
+}
+
+
+// how we called the api 
+async function reverseGeocode(lat: number, lon: number) {
+  const baseUrl = "https://maps.googleapis.com/maps/api/geocode/json";
+  
+  // url construction
+  const url = `${baseUrl}?latlng=${lat},${lon}&key=${process.env.GOOGLEMAPS_API_KEY}`;
+  
+  
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const json = await res.json();
+    return json;
+  } catch (err) {
+    console.error("Geocode request failed:", err);
+    return null;
+  }
+}
+
+// How we processed the stop data
+async function processStops(stops: StopInfo[]) {
+
+  // iterating over each stop 
+  for (const stop of stops) {
+    // our api call with the invidual stop data
+    const data = await reverseGeocode(stop.stop_lat, stop.stop_lon);
+
+    // targeting what we want from api call
+    const findComponent = (type: string) =>
+      data?.results?.[0]?.address_components?.find(c => c.types.includes(type));
+      
+    // creating a new stop record with all information
+    const record = {
+      stop_id: stop.stop_id,
+      stop_name: stop.stop_name,
+      stop_lat: stop.stop_lat,
+      stop_lon: stop.stop_lon,
+      stop_code: stop.stop_code,
+      city_name: findComponent("locality")?.long_name || null,
+      county_name: findComponent("administrative_area_level_2")?.long_name || null,
+      state_name: findComponent("administrative_area_level_1")?.long_name || null,
+      zip_code: findComponent("postal_code")?.long_name || null,
+    };
+
+    // save into results just for testing
+    results.push(record);
+
+    // File appending this adds a comma after every json object
+    fs.appendFileSync("gtfs_results.json", JSON.stringify(record) + ",\n");
+
+    console.log(`Processed ${stop.stop_id}`);
+  }
+}
+
+processStops(stops);
+
+```
+
+## Joined Data:
+
+-   created dataframe that stores the number of vanpool rides per city
+
+-   created dataframe that stores the number of bus stops per city
+
+-   then we joined the both datasets by city name
+
+```{r}
+
+
+vanpool_df <- read.csv("/Users/codechugger/Downloads/Vanpool.csv")
+
+
+bus_df <- fromJSON("/Users/codechugger/projects/201_project/gtfs_results.json")
+
+
+
+vanpool_city <- vanpool_df %>%
+  count(City, name = "num_vanpools")
+
+
+bus_city <- bus_df %>%
+  count(city_name, name = "num_stops")
+
+
+joinedData <- full_join(bus_city, vanpool_city, by = c("city_name" = "City"))
+
+
+glimpse(joinedData)
+```
+
+# Codebook:
+
+**Bus data codebook:** [Reference - General Transit Feed Specification](https://gtfs.org/documentation/schedule/reference/?utm_source=copilot.com)
+
+**Promotion of Human Values** Does not exist. This is a smaller dataset, published by King County. As a result, they did not publish a codebook to go along with the dataset. However, I would say that the data is understandable and usable without a codebook.
+
+**Relevant Variables:** The most relevant variables that we intend to use are the bus stops’ latitude and longitude (stop_lat and stop_lon), and the Vanpool trips’ origin latitude and longitude (the variables are just called Latitude and Longitude for this one).
+
+### **Write a brief 150-word statement describing any potential biases that may arise from what features your data might be missing. Include how your combined data set reflects or does not reflect the 8 human rights principles in this paper:**
+
+-   Our dataset is missing historical information/information from the past so we cannot actually look at data such as delays, on-time performance, etc. This might lead to cases where one area looks like it has better bus quality because it has more stops, but in reality, buses there might be delayed or canceled often, which we cannot tell from our data.
+
+**Privacy, Safety and Security:** The Vanpool dataset has the start and end point of vanpool trips. This could be a privacy/safety concern as you can find out where people commute to/from if you know where they start or end their trips by Vanpool. However, our dataset does not include any identifiable information about people.
+
+**Accountability:** The data is managed by the government, and for the Vanpool data, it is provided by the volunteer bookkeeper. These seem like they have good accountability.
+
+**Transparency and Explainability:** The bus data is very transparent and explainable especially as they use the standard GTFS conventions that make it easy to find out what each data means. The Vanpool data is also very transparent but might take some more inferences to figure out what the columns mean.
+
+**Fairness and Non‑Discrimination:** Data is counted for all bus stops and Vanpool trips across all areas. This data should be fair and non-discriminatory.
+
+**Professional Responsibility:** Both our datasets are managed by the government/public agencies, so this should be reflected in our combined dataset.\
+**Promotion of Human Values:** Our combined dataset could help to see where better bus service might be needed as that might be causing people to rely on vanpool, so it would promote human values of equality.
+
+# Section IV: Data Wrangling
+
+-   This section will comprise all the work you did from **Part IV: Combined Data Wrangling**
+
+-   This section should contain at least **3** distinct actions you did on your data set. These don't necessarily need to be sequential (e.g., cleaning the data set, then summarizing the cleaned version), but it can be!
+
+-   Make sure that you clearly label each step so it's clear to us that you performed at least three distinct actions.
+
+    ## Changed NA values to 0 to represent no vanpool rides starting in city
+
+    -   The NA value we had for the joined data didn't really help us so if it showed up in a row as NA it would be better to represent it as 0 vanpool rides were starting in that city. Then we could properly add up all the vanpool rides in each city without any issues.
+
+    ```{r}
+
+    joinedData <- joinedData %>%
+      mutate(
+       num_vanpools = ifelse(is.na(num_vanpools), 0, num_vanpools)
+      )
+    ```
+
+    ## Removed row with city name with NA value
+
+    -   While merging the data we realized there were parts of the data that had no city names from the vanpool data which was around 23 rows. we made a decision to remove those rows for joining since we had \~1500 rows of vanpool data and 13,000 rows of bus data. We do still plan on using those rows later on but for now we decided to remove to show some proof of concept for joining our data.
+
+    ```{r}
+
+
+    joinedData <- joinedData %>%
+      filter(!is.na(city_name) & city_name != "")
+    ```
+
+    ## Changed NA values to 0 to represent no bus stops in city
+
+    -   This is the same idea behind removing the NA values for Vanpools but it is meant to ensure that if no bus stops are found within a given city then it should be represented as a 0. This is also to make it easier for when we group our data by each city to see bus stops in each city within king county.
+
+    ```{r}
+
+
+    joinedData <- joinedData %>%
+      mutate(
+      num_stops = ifelse(is.na(num_stops), 0, num_stops)
+      )
+
+
+    glimpse(joinedData)
+
+
+
+    scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name)) +
+      geom_point(alpha = 0.7) +
+      scale_x_log10() +
+      scale_y_log10() +
+      theme_minimal()
+
+    ggplotly(scatterData, tooltip = c("text","x","y"))
+
+    ```
+
+## Section V: Group Information
+
+### **A sentence describing the main topic of interest for the group, the lab section time and your TA's full name.**
+
+**Topic of Interest:** Determining a correlation between bus service quality and Vanpool usage in Puget Sound cities.
+
+**Lab Section:** BA
+
+**TA:** Yashita Tanwar
+
+Vish Venugopal (The Information School, University of Washington; [vishv\@uw.edu](mailto:vishv@uw.edu)) is interested in this topic because of his interest in data science and transit policies. His other career/academic interests include: UX, HCI, XR, Software development.
+
+Abdinasir Yussuf(The Information School, University of Washington; abdiny\@uw.edu) interested in this topic because public transportation directly impacts me and my local community. I’m also passionate about biomedical informatics, particularly the role of patient health records in improving healthcare outcomes.
+
+**Coding Notes:**
+
+-   Google API: We used the google api to convert bus stop coordinates to city names then added that to each row in the dataset.
+
+-   TypeScript code:The typescript code shows how we converted the bus stop data into an array that was iterable then used the individual lat and lon values to call the api. Then it stores all of the data into a json file.
