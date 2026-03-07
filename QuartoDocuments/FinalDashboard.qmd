@@ -1,6 +1,9 @@
 ---
 title: "Puget Sound Vanpool and Transit Data"
-format: dashboard
+author: "Vish Venugopal, Abdinasir Yussuf"
+format: 
+  dashboard:
+    theme: sandstone
 ---
 
 ```{r}
@@ -11,6 +14,7 @@ library(dplyr)
 library(tidyverse)
 library(jsonlite)
 library(leaflet)
+library(paletteer)
 
 
 # Settting up the data
@@ -48,83 +52,115 @@ joinedData <- joinedData %>%
 
 # Home
 
-## Row {height="60%"}
+## Research Questions:
 
-```{r}
+Link: [Article](https://kingcountymetro.blog/2024/01/24/a-flexible-affordable-vanpool-will-transform-your-commute/)
 
+**How does a city's population relate to the total amount of vanpool and bus stops?**
 
+Some cities have more bus stops than others, which might affect how many people use vanpools. Population also plays a big role in the number of bus stops and vanpools within a city. We use bus stop locations, routes, and schedules from the [Puget Sound GTFS](https://gtfs.sound.obaweb.org/prod/gtfs_puget_sound_consolidated.zip), vanpool origins and destinations from the K[ing County Open Data Vanpool Dataset](https://data.kingcounty.gov/Transportation-Roads/King-County-Metro-Vanpool/pn62-amqd), and [Census data](https://www.washington-demographics.com/cities_by_population) to examine the relationship between population and transit and vanpool usage. This helps us understand whether larger cities naturally have more transit options and vanpool activity, or if some places rely on vanpools more than others. One limitation is that the amount of cities within each dataset may be different and could lead to unrepresented cities with both no bus stops and vanpool data.
 
-```
+**How does the number of bus stops per capita in a city relate to vanpool usage per capita?**
 
-## Row {height="40%"}
+While some cities have more bus stops than vanpool rides and others have the opposite, we want to examine how the number of bus stops relative to a city's population relates to the number of vanpool rides per capita. We use the same datasets: Puget Sound GTFS for bus stops, King County Open Data Vanpool Dataset for vanpool origins, and Census data for population. This helps us see if bus accessibility relative to population size affects vanpool usage. This dives a little deeper than comparing the total number of stops and vanpool rides within a city and looks at those numbers in relation to the population. We used the population in a city to create a transit score for both types of transportation.
+
+**Where are vanpools and bus stops most concentrated across King County?**
+
+Some areas have lots of bus stops and vanpools, while others have very few. By looking at Puget Sound GTFS along with King County Open Data Vanpool Dataset, we can map where vanpool commuting is active and where transit options are more limited. This is interesting because it shows which neighborhoods have the most access to transit and ridesharing options. One limitation is accurately identifying the jurisdiction of some vanpool origins when comparing them to transit data, since the transit dataset only covers King County.
+
+# Dashboard
 
 ### Column {.tabset}
 
 ```{r}
-#| title: Chart 2
-
-top5Vanpool <- joinedData %>% arrange(desc(num_stops)) %>% head(5)
+#| title: Bus Stops and Vanpools Shown on Map
 
 
-ggplot(top5Vanpool, aes(x = city_name, y = num_vanpools)) +
-  geom_col()+
-  labs(
-    title = "Top 5 Cities by Vanpool Count",
-    subtitle = "Number of active vanpools as of 2023",
-    x = "City",
-    y = "Number of Vanpools",
-    caption = "DATA.GOV"
+### data frame for plotting vanpool and bus data
+
+
+mapPool <- vanpool_df %>% 
+  filter(Origin_Des != "Destination") |>
+  mutate(
+    type = "vanpool"
+  )|>
+  select(Latitude, Longitude, type, City)
+
+mapBus <- bus_df %>%
+  mutate(
+    type = 'bus'
+  ) |>
+  select(Latitude = stop_lat, Longitude = stop_lon, type, City = city_name)
+
+
+mergedMap <- bind_rows(mapPool, mapBus)
+
+
+# Map logic
+htmltools::tags$style(
+  ".leaflet-pane svg path { 
+     mix-blend-mode: screen; 
+  }"
+)
+
+pal <- colorFactor(
+  palette = c("#742dfc", "#d19d00"), 
+  levels = c("bus", "vanpool")
+)
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.DarkMatter) %>%
+  setView(lng = -122.25, lat = 47.6511, zoom = 9.75) %>%
+  
+  addCircles(
+    data = mergedMap %>% filter(type == "bus"),
+    radius = 200, color = "#742dfc", 
+    group = "Big Circles",
+    fillOpacity = 0.05, stroke = FALSE
+  ) %>%
+  addCircles(
+    data = mergedMap %>% filter(type == "vanpool"),
+    radius = 250, color = "#d19d00", 
+    group = "Big Circles",
+    fillOpacity = 0.15, stroke = FALSE
+  ) %>%
+  
+  addCircles(
+    data = mergedMap %>% filter(type == "bus"),
+    radius = 75, color = "#742dfc", 
+    group = "Small Circles",
+    fillOpacity = 0.1, stroke = FALSE
+  ) %>%
+  addCircles(
+    data = mergedMap %>% filter(type == "vanpool"),
+    radius = 125, color = "#d19d00", 
+    group = "Small Circles",
+    fillOpacity = 0.25, stroke = FALSE
+  ) %>%
+  
+  addLayersControl(
+    # baseGroups creates 'radio buttons' so only one size can be active at a time
+    baseGroups = c("Big Circles", "Small Circles"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  
+  addLegend(
+    position = "bottomright",
+    pal = pal, 
+    values = c("bus", "vanpool"),
+    title = "Transit Type",
+    opacity = 1,
+    labFormat = labelFormat(transform = function(x) {
+      # Capitalizes 'bus' and 'vanpool' for a cleaner professional look
+      ifelse(x == "bus", "Bus", "Vanpool")
+    })
   )
 
-```
-
-```{r}
-#| title: Chart 3
-
-top5Stops <- joinedData %>% arrange(desc(num_vanpools)) %>% head(5)
-
-ggplot(top5Stops, aes(x = city_name, y = num_stops)) +
-  geom_col()+
-  labs(
-    title = "Top 5 Cities by Bus stop Count",
-    subtitle = "Number of active bus stops as of 2026",
-    x = "City",
-    y = "Number of Stops",
-    caption = "King County Metro"
-  )
-
-
-```
-
-### Column
-
-```{r}
-#| title: Chart 4
-
-scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name)) +
-  geom_point(alpha = 0.7) +
-  scale_x_log10() +
-  scale_y_log10() +
-  theme_minimal()
-
-ggplotly(scatterData, tooltip = c("text","x","y"))
-```
-
-# About The Data
-
-```{r}
-#| title: Churn Reason
 
 ```
 
 ```{r}
-#| title: Contracts by State
-
-```
-
-Per capita data and visualizations
-
-```{r}
+#| title: Bus Score vs Vanpool Score Compared 
 
 populationcensus <- read.csv("../data/Washington_DemographicsByCityProcessed.csv")
 
@@ -170,7 +206,7 @@ joinedData <- joinedData |>
 # Cities with biger populations have bigger circles
 corr_plot <- ggplot(joinedData, aes(x = bus_score, y = van_score, size = population, text = city_name)) +
   geom_point(alpha = 0.4, color = "dodgerblue") +
-  scale_size_continuous(range = c(.5, 7.5)) +
+  scale_size_continuous(range = c(1.5, 15)) +
   labs(
     title = "Transit Score Correlation",
     x = "Bus Stop Score (0-100)",
@@ -182,3 +218,28 @@ ggplotly(corr_plot, tooltip = c("text", "x", "y", "size"))
 
 
 ```
+
+```{r}
+#| title: Bus Stop Count Compared to Vanpool Count
+
+scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name, color = population)) +
+  geom_point(size = 7.5, alpha = .8) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_gradient(low = "#5425b0", 
+                       high = "#d19d00", 
+                       trans = "log10", 
+                       labels = scales::label_comma()) +
+  theme_light() +
+  labs(
+    title = "Bus Stop Count to Vanpool Count Correlation",
+    x = "# of Bus Stops",
+    y = "# of Vanpools"
+  )
+
+ggplotly(scatterData, tooltip = c("text","x","y","color"))
+```
+
+
+
+# About The Data
