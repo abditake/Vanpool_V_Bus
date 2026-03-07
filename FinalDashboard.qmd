@@ -1,0 +1,31 @@
+---
+title: "Puget Sound Vanpool and Transit Data"
+format: dashboard
+---
+
+## Row {height="70%"}
+
+```{r}
+plot(cars)
+```
+
+## Row {height="30%"}
+
+### Column {.tabset}
+
+```{r}
+#| title: Chart 2
+hist(cars$speed)
+```
+
+```{r}
+#| title: Chart 3
+hist(cars$dist)
+```
+
+### Column
+
+```{r}
+#| title: Chart 4
+plot(cars$speed, cars$dist)
+```
