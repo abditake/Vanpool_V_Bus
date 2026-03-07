@@ -19,8 +19,18 @@ vanpool_df <- read.csv("../data/Vanpool.csv")
 
 bus_df <- fromJSON("../data/gtfs_results.json")
 
-vanpool_city <- vanpool_df %>%
-  count(City, name = "num_vanpools")
+vanpool_city <- vanpool_df |>
+  mutate(
+    lon = as.numeric(str_extract(the_geom, "(?<=POINT \\()[-0-9.]+")),
+    lat = as.numeric(str_extract(the_geom, "[-0-9.]+(?=\\)$)"))
+  ) |>
+  group_by(City) %>%
+  summarise(
+    num_vanpools = n(),
+    lat = first(lat),
+    lon = first(lon),
+    .groups = "drop"
+  )
 
 
 bus_city <- bus_df %>%
@@ -35,7 +45,6 @@ joinedData <- joinedData %>%
   ) |>
   filter(!is.na(city_name) & city_name != "")
 
-
 ```
 
 # Home 
@@ -44,17 +53,11 @@ joinedData <- joinedData %>%
 
 ```{r}
 
-scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name)) +
-  geom_point(alpha = 0.7) +
-  scale_x_log10() +
-  scale_y_log10() +
-  theme_minimal()
 
-ggplotly(scatterData, tooltip = c("text","x","y"))
 
 ```
 
-## Row {height="30%"}
+## Row {height="40%"}
 
 ### Column {.tabset}
 
@@ -98,7 +101,14 @@ ggplot(top5Stops, aes(x = city_name, y = num_stops)) +
 
 ```{r}
 #| title: Chart 4
-plot(cars$speed, cars$dist)
+
+scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal()
+
+ggplotly(scatterData, tooltip = c("text","x","y"))
 ```
 
 # About The Data 
