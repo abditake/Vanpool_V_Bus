@@ -35,7 +35,7 @@ library(dplyr)
 library(tidyverse)
 library(jsonlite)
 
-vanpool_df <- read.csv("/Users/codechugger/Downloads/Vanpool.csv")
+vanpool_df <- read.csv("../data/Vanpool.csv")
 
 
 glimpse(vanpool_df)
@@ -51,7 +51,7 @@ Some of the entries in the Vanpool data have NA values for city, employer, etc. 
 
 
 
-stops_df <- read.csv("/Users/codechugger/Downloads/gtfs_puget_sound_consolidated/stops.txt")
+stops_df <- read.csv("../data/stops.txt")
 
 glimpse(stops_df)
 
@@ -198,10 +198,8 @@ processStops(stops);
 ```{r}
 
 
-vanpool_df <- read.csv("/Users/codechugger/Downloads/Vanpool.csv")
 
-
-bus_df <- fromJSON("/Users/codechugger/projects/201_project/gtfs_results.json")
+bus_df <- fromJSON("../data/gtfs_results.json")
 
 
 
