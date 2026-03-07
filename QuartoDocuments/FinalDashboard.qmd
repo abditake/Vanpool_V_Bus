@@ -14,7 +14,6 @@ library(dplyr)
 library(tidyverse)
 library(jsonlite)
 library(leaflet)
-library(paletteer)
 
 
 # Settting up the data
@@ -52,13 +51,25 @@ joinedData <- joinedData %>%
 
 # Home
 
-## Research Questions:
+## Column {.tabset}
 
-Link: [Article](https://kingcountymetro.blog/2024/01/24/a-flexible-affordable-vanpool-will-transform-your-commute/)
+### 1.1 Providing Topical Overview
+
+<img src="https://cdn.kingcounty.gov/-/media/king-county/depts/metro/images/travel-options/bus/trolley0615.jpg?rev=599f6327eb5e4cbdba3a8628228ee769&amp;hash=BCB096D487DF4CB0D1B4B37BDDDA0A33" alt="King County Metro Bus / Trolley" width="500"/> <img src="https://cdn.kingcounty.gov/-/media/king-county/independent/governance-and-leadership/government-oversight/auditors-office/reports/audits/2024/vanpool/vanpool.jpg?h=400&amp;iar=0&amp;w=600&amp;rev=d0b61ad6afbf45759b19c3ba6471e006&amp;hash=F7D7A2F2509BAF5673AC2D8D99FA9CE3" alt="King County Metro Bus / Trolley" width="500"/>
+
+**Background Article Link:** [How Vanpools Help Grow Transit Ridership, Fill Gaps and Increase Efficiency - Association for Commuter Transportation](https://www.actweb.org/news/how-vanpools-help-grow-transit-ridership-fill-gaps-and-increase-efficiency)
+
+**Puget Sound GTFS:** <https://gtfs.sound.obaweb.org/prod/gtfs_puget_sound_consolidated.zip>
+
+**King County Open Data:** <https://data.kingcounty.gov/Transportation-Roads/King-County-Metro-Vanpool/pn62-amqd>
+
+**Population Data:** <https://data.kingcounty.gov/Transportation-Roads/King-County-Metro-Vanpool/pn62-amqd>
+
+**Research Questions:**
 
 **How does a city's population relate to the total amount of vanpool and bus stops?**
 
-Some cities have more bus stops than others, which might affect how many people use vanpools. Population also plays a big role in the number of bus stops and vanpools within a city. We use bus stop locations, routes, and schedules from the [Puget Sound GTFS](https://gtfs.sound.obaweb.org/prod/gtfs_puget_sound_consolidated.zip), vanpool origins and destinations from the K[ing County Open Data Vanpool Dataset](https://data.kingcounty.gov/Transportation-Roads/King-County-Metro-Vanpool/pn62-amqd), and [Census data](https://www.washington-demographics.com/cities_by_population) to examine the relationship between population and transit and vanpool usage. This helps us understand whether larger cities naturally have more transit options and vanpool activity, or if some places rely on vanpools more than others. One limitation is that the amount of cities within each dataset may be different and could lead to unrepresented cities with both no bus stops and vanpool data.
+Some cities have more bus stops than others, which might affect how many people use vanpools. Population also plays a big role in the number of bus stops and vanpools within a city. We use bus stop locations, routes, and schedules from the Puget Sound GTFS, vanpool origins and destinations from the King County Open Data Vanpool Dataset, and Census data to examine the relationship between population and transit and vanpool usage. This helps us understand whether larger cities naturally have more transit options and vanpool activity, or if some places rely on vanpools more than others.
 
 **How does the number of bus stops per capita in a city relate to vanpool usage per capita?**
 
@@ -68,17 +79,68 @@ While some cities have more bus stops than vanpool rides and others have the opp
 
 Some areas have lots of bus stops and vanpools, while others have very few. By looking at Puget Sound GTFS along with King County Open Data Vanpool Dataset, we can map where vanpool commuting is active and where transit options are more limited. This is interesting because it shows which neighborhoods have the most access to transit and ridesharing options. One limitation is accurately identifying the jurisdiction of some vanpool origins when comparing them to transit data, since the transit dataset only covers King County.
 
-# Dashboard
+**Ethical questions or limitations:** One limitation is that the amount of cities within each dataset may be different and could lead to unrepresented cities with both no bus stops and vanpool data.
 
-### Column {.tabset}
+### 1.2 Providing Data Context
+
+**Bus Data:** The bus dataset captures detailed information on public transit across the Puget Sound region, including the exact coordinates of bus stops, routes, trips, schedules, and timing information. The data combines records from multiple transit agencies, such as Sound Transit and Community Transit, providing a comprehensive view of scheduled bus operations. In total, the dataset contains 13,230 records collected in 2026, covering the King County area of Washington State. While this sample offers valuable insight into regional transit patterns and can support mapping and timing analyses, it does not account for informal or unscheduled trips, meaning it may not fully represent all local transit usage.
+
+**Vanpool Data:** The vanpool dataset records 1,564 rideshare commuting trips, about half of which are origin or start locations that we use in our analysis. Each record includes geographic coordinates, city names, and identifiers for the associated worksite and employer, allowing commuting patterns to be mapped and compared across locations. The data reflects vanpool activity within the Puget Sound region of Washington State as of 2023. A key benefit of this sample is that the precise coordinates enable detailed mapping and spatial analysis of commuting trends.
+
+**Population/Census Data:** This dataset contains population figures for all 628 cities in Washington State, based on the 2024 American Community Survey. Each record includes the city name and its population, allowing for comparisons across cities and regions. A key advantage of this dataset is that it reflects recent, up-to-date population information.
+
+### Coding Notes
+
+**Coding Notes**
+
+**Google API:**
+
+-   We used the google api to convert bus stop coordinates to city names then added that to each row in the dataset. There were no in-class tools we learned on how to do this. The only other option would have been to manually search each coordinate in Google Maps or another software and find the city name, and add it to a spreadsheet, but that would have been impractical.
+
+-   We learned to use this tool through Google’s provided resources and website.
+
+**TypeScript code:**
+
+-   The typescript code shows how we converted the bus stop data into an array that was iterable then used the individual lat and lon values to call the api. Then it stores all of the data into a json file. The examples codes provided on how to use the API were in TypeScript, so it was easiest and most practical to perform those operations in TypeScript, rather than learning how to do it in R.
+
+-   We learned to use this through Google’s provided code examples.
+
+**Leaflet tools:**
+
+-   We had to use addLayersControl in leaflet to allow toggling between the large circles and small circles on the map visualization. I wanted to add this because when I zoomed into the map, it was difficult to see exactly where the bus stops/vanpool points were, and if i made the circles smaller, it became harder to see them when zoomed out. So, it made the most sense to add this feature, which allowed me to create toggleable groups. I don’t think any in class tools we covered allowed for this.
+
+-   I found resources on how to use this from the website rdocumentation.org
+
+**Ggplot tools:**
+
+-   We used functions like scale_y_log10() on the scatterplots to fix the scaling of the graph. I don’t think we learned this in class but it was the best way we could think of to visualize the data while having the extreme data points not ruin the visualization (which we had). One downside to this is that it might not be obvious that the plot is in log scale at first, and the user might think the data is different than it actually is.
+
+-   We learned how to use this by searching up how to use log scale for ggplot graphs
+
+### Conclusion
+
+**Conclusion** We started this project with Vanpool data that piqued our interest. This data was extensive and covered a large portion of King County, and our first instinct was to figure out why people would be more inclined to carpool to work instead of using public transportation. Our first hypothesis was that people used vanpools in areas that didn’t have a good transit score, meaning places with fewer bus stops per capita. That led us to our first question: how does the total number of stops and vanpool rides within a city relate to the population of that city? This is where we realized our first major takeaway: a higher population count didn’t necessarily mean a larger discrepancy in vanpool rides and bus stops.In this instance it wasn’t that our assumptions were wrong but they were challenged. We noticed that places like Lakewood, which had a higher population, could have a smaller number of stops compared to other cities. 
+
+Our second takeaway was understanding that the calculation for transit score could involve many different aspects that we might not have included. This made us realize that the data we have gathered could be expanded even further to give us a more accurate understanding of the transit score, where factors like degrees of proximity within a location could have added effects on the transit score. This was relevant when using population data to understand the number of bus stops and vanpools per capita. We honestly think we made a good estimation of the transit score based on the datasets we had; however, we understand that there are areas where this could be made more accurate to reflect regional discrepancies we might have overlooked.
+
+Our final takeaway from this project was that, although some locations had a concentration of bus stops, they still experienced a substantial number of vanpool rides. We concluded that this could be because, while we are measuring all bus stops within a given area on the map, we are not taking into account the route of individual buses. This could mean that around a vanpool origin, there are significantly fewer bus stops that are relevant to our project because they don’t travel toward areas where vanpool rides stop. 
+
+One thing to note is that we may be underestimating cities with low populations. We had to remove data from a few cities that we did not have the population data for (which we are assuming have more cities that have small populations) so that we could make per-capita results , so that might skew our results to underrepresent smaller cities.
+
+For our first big-picture question, our map showed us that as we move out of areas that are concentrated with a large number of bus stops we notice a higher concentration of vanpool rides. In our second big-picture question, through the scatter-plot, we confirmed our initial assumptions that places with higher bus scores would have lower vanpool rides per capita. Lastly, when comparing the total number of stops and vanpool rides to a city's given population we discovered that cities with a higher population would have higher amounts of vanpool rides and bus stops, which is what we also initially predicted.
+
+For the future direction of this project, because we also have data of Vanpool trips’ endpoints, it would be helpful to utilize that data to show both Vanpool routes and bus routes, and compare them. This could better help us understand the reason people use Vanpools in areas (perhaps the bus routes in an area do not go towards important areas).
+
+# Map {orientation="columns"}
+
+## Column {width="25%"}
+
+**Where are vanpools and bus stops most concentrated across King County?** We answer this question through an interactive map that shows where Vanpool trip starting locations (Yellow) and bus stop locations (Purple) are located across the Puget Sounds. We used complementary colors to make the distinction easy to see. From this map, we can see that most Vanpool trips start outside of Seattle, and that many bus stops are concentrated in downtown Seattle.
+
+## Column {width="75%"}
 
 ```{r}
-#| title: Bus Stops and Vanpools Shown on Map
-
-
 ### data frame for plotting vanpool and bus data
-
-
 mapPool <- vanpool_df %>% 
   filter(Origin_Des != "Destination") |>
   mutate(
@@ -109,6 +171,7 @@ pal <- colorFactor(
 )
 
 leaflet() %>%
+  # the below line changes the map's theme to look dark
   addProviderTiles(providers$CartoDB.DarkMatter) %>%
   setView(lng = -122.25, lat = 47.6511, zoom = 9.75) %>%
   
@@ -139,7 +202,6 @@ leaflet() %>%
   ) %>%
   
   addLayersControl(
-    # baseGroups creates 'radio buttons' so only one size can be active at a time
     baseGroups = c("Big Circles", "Small Circles"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
@@ -148,19 +210,22 @@ leaflet() %>%
     position = "bottomright",
     pal = pal, 
     values = c("bus", "vanpool"),
-    title = "Transit Type",
-    opacity = 1,
-    labFormat = labelFormat(transform = function(x) {
-      # Capitalizes 'bus' and 'vanpool' for a cleaner professional look
-      ifelse(x == "bus", "Bus", "Vanpool")
-    })
+    title = "Transit Type"
   )
+  
 
 
 ```
 
+# Bus Score vs Vanpool Score {orientation="columns"}
+
+## Column {width="30%"}
+
+**How does the number of bus stops per capita in a city relate to vanpool usage per capita?** We answer this question through a scatterplot with the two axis being Bus Score and Vanpool Score. Each city's bus score is calculated by dividing its total bus stops by its population so that we have a value for bus stops per capita. Once we have that for each city, we find the maximum value out of all the cities, then calculate a new value called bus score by dividing that city's bus stops per capita by the maximum bus stops per capita that was found. In summary, the bus score is a normalized bus stops per capita for each city. Vanpool score is the same, but for Vanpools. The scatterplot makes it easy to see the relation between the two scores. In the scatterplot we can see that there is a trend that cities with higher vanpool scores generally are in the lower half of bus stop scores.
+
+## Column {width="70%"}
+
 ```{r}
-#| title: Bus Score vs Vanpool Score Compared 
 
 populationcensus <- read.csv("../data/Washington_DemographicsByCityProcessed.csv")
 
@@ -178,7 +243,7 @@ populationcensus <- populationcensus |>
 
 joinedData <- left_join(joinedData, populationcensus, by = c("city_name" = "name"))
 
-# removing outlier cities/bad data
+# removing outlier cities/bad data that mess up the normalization step
 joinedData <- joinedData |> filter(city_name != "Oso")
 joinedData <- joinedData |> filter(city_name != "Ravensdale")
 
@@ -203,9 +268,8 @@ joinedData <- joinedData |>
   filter(!is.na(population))
 
 
-# Cities with biger populations have bigger circles
-corr_plot <- ggplot(joinedData, aes(x = bus_score, y = van_score, size = population, text = city_name)) +
-  geom_point(alpha = 0.4, color = "dodgerblue") +
+corr_plot <- ggplot(joinedData, aes(x = bus_score, y = van_score,  text = city_name)) +
+  geom_point(alpha = 0.375, color = "dodgerblue", size = 3) +
   scale_size_continuous(range = c(1.5, 15)) +
   labs(
     title = "Transit Score Correlation",
@@ -219,8 +283,15 @@ ggplotly(corr_plot, tooltip = c("text", "x", "y", "size"))
 
 ```
 
+# Population Comparisons
+
+## Row {height="20%"}
+
+**How does a city's population relate to the total amount of vanpool and bus stops?** We answer this with a scatterplot, where number of bus stops is on one axis, and number of Vanpools is on the other axis, and each dot is a city. Each dot's color ranges from purple to yellow, where purple is low population and yellow is high population. This makes it easy to see the correlation that higher populated cities tend to have both more bus stops, and more vanpool usage.
+
+## Row {height="80%"}
+
 ```{r}
-#| title: Bus Stop Count Compared to Vanpool Count
 
 scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name, color = population)) +
   geom_point(size = 7.5, alpha = .8) +
@@ -230,7 +301,6 @@ scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = ci
                        high = "#d19d00", 
                        trans = "log10", 
                        labels = scales::label_comma()) +
-  theme_light() +
   labs(
     title = "Bus Stop Count to Vanpool Count Correlation",
     x = "# of Bus Stops",
@@ -239,7 +309,3 @@ scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = ci
 
 ggplotly(scatterData, tooltip = c("text","x","y","color"))
 ```
-
-
-
-# About The Data
