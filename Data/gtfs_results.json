@@ -13224,5 +13224,5 @@
 {"stop_id":"97-96","stop_name":"E MARINE VIEW DR & 10TH ST  - SB","stop_lat":48.004234,"stop_lon":-122.189056,"stop_code":"2017","city_name":"Everett","county_name":"Snohomish County","state_name":"Washington","zip_code":"98201"},
 {"stop_id":"97-97","stop_name":"E MARINE VIEW DR & 12TH ST - SB","stop_lat":48.000927,"stop_lon":-122.189163,"stop_code":"2070","city_name":"Everett","county_name":"Snohomish County","state_name":"Washington","zip_code":"98201"},
 {"stop_id":"97-98","stop_name":"WALNUT ST & 15TH ST - SB","stop_lat":47.997681,"stop_lon":-122.189201,"stop_code":"2115","city_name":"Everett","county_name":"Snohomish County","state_name":"Washington","zip_code":"98201"},
-{"stop_id":"97-99","stop_name":"WALNUT ST & 17TH ST - SB","stop_lat":47.99469,"stop_lon":-122.189278,"stop_code":"2130","city_name":"Everett","county_name":"Snohomish County","state_name":"Washington","zip_code":"98201"},
+{"stop_id":"97-99","stop_name":"WALNUT ST & 17TH ST - SB","stop_lat":47.99469,"stop_lon":-122.189278,"stop_code":"2130","city_name":"Everett","county_name":"Snohomish County","state_name":"Washington","zip_code":"98201"}
 ]
