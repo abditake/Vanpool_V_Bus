@@ -3,10 +3,55 @@ title: "Puget Sound Vanpool and Transit Data"
 format: dashboard
 ---
 
-## Row {height="70%"}
 
 ```{r}
-plot(cars)
+
+# loading libraries
+library(plotly)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+library(leaflet)
+
+
+# Settting up the data
+vanpool_df <- read.csv("../data/Vanpool.csv")
+
+bus_df <- fromJSON("../data/gtfs_results.json")
+
+vanpool_city <- vanpool_df %>%
+  count(City, name = "num_vanpools")
+
+
+bus_city <- bus_df %>%
+  count(city_name, name = "num_stops")
+
+joinedData <- full_join(bus_city, vanpool_city, by = c("city_name" = "City"))
+
+joinedData <- joinedData %>%
+  mutate(
+   num_vanpools = ifelse(is.na(num_vanpools), 0, num_vanpools),
+   num_stops = ifelse(is.na(num_stops), 0, num_stops)
+  ) |>
+  filter(!is.na(city_name) & city_name != "")
+
+
+```
+
+# Home 
+
+## Row {height="60%"}
+
+```{r}
+
+scatterData <- ggplot(joinedData, aes(x = num_stops, y = num_vanpools, text = city_name)) +
+  geom_point(alpha = 0.7) +
+  scale_x_log10() +
+  scale_y_log10() +
+  theme_minimal()
+
+ggplotly(scatterData, tooltip = c("text","x","y"))
+
 ```
 
 ## Row {height="30%"}
@@ -15,12 +60,38 @@ plot(cars)
 
 ```{r}
 #| title: Chart 2
-hist(cars$speed)
+
+top5Vanpool <- joinedData %>% arrange(desc(num_stops)) %>% head(5)
+
+
+ggplot(top5Vanpool, aes(x = city_name, y = num_vanpools)) +
+  geom_col()+
+  labs(
+    title = "Top 5 Cities by Vanpool Count",
+    subtitle = "Number of active vanpools as of 2023",
+    x = "City",
+    y = "Number of Vanpools",
+    caption = "DATA.GOV"
+  )
+
 ```
 
 ```{r}
 #| title: Chart 3
-hist(cars$dist)
+
+top5Stops <- joinedData %>% arrange(desc(num_vanpools)) %>% head(5)
+
+ggplot(top5Stops, aes(x = city_name, y = num_stops)) +
+  geom_col()+
+  labs(
+    title = "Top 5 Cities by Bus stop Count",
+    subtitle = "Number of active bus stops as of 2026",
+    x = "City",
+    y = "Number of Stops",
+    caption = "King County Metro"
+  )
+
+
 ```
 
 ### Column
@@ -28,4 +99,16 @@ hist(cars$dist)
 ```{r}
 #| title: Chart 4
 plot(cars$speed, cars$dist)
+```
+
+# About The Data 
+
+```{r}
+#| title: Churn Reason
+
+```
+
+```{r}
+#| title: Contracts by State
+
 ```
