@@ -4,6 +4,7 @@ author: "Vish Venugopal, Abdinasir Yussuf"
 format: 
   dashboard:
     theme: sandstone
+    embed-resources: true
 ---
 
 ```{r}
