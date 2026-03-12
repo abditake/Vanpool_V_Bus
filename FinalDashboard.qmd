@@ -20,9 +20,9 @@ library(leaflet)
 
 
 # Settting up the data
-vanpool_df <- read.csv("data/Vanpool.csv")
+vanpool_df <- read.csv("Data/Vanpool.csv")
 
-bus_df <- fromJSON("data/gtfs_results.json")
+bus_df <- fromJSON("Data/gtfs_results.json")
 
 vanpool_city <- vanpool_df |>
   mutate(
@@ -88,13 +88,12 @@ Some areas have lots of bus stops and vanpools, while others have very few. By l
 
 **Bus Data:** The bus dataset captures detailed information on public transit across the Puget Sound region, including the exact coordinates of bus stops, routes, trips, schedules, and timing information. The data combines records from multiple transit agencies, such as Sound Transit and Community Transit, providing a comprehensive view of scheduled bus operations. In total, the dataset contains 13,230 records collected in 2026, covering the King County area of Washington State. While this sample offers valuable insight into regional transit patterns and can support mapping and timing analyses, it does not account for informal or unscheduled trips, meaning it may not fully represent all local transit usage.
 
+
 **Vanpool Data:** The vanpool dataset records 1,564 rideshare commuting trips, about half of which are origin or start locations that we use in our analysis. Each record includes geographic coordinates, city names, and identifiers for the associated worksite and employer, allowing commuting patterns to be mapped and compared across locations. The data reflects vanpool activity within the Puget Sound region of Washington State as of 2023. A key benefit of this sample is that the precise coordinates enable detailed mapping and spatial analysis of commuting trends.
 
 **Population/Census Data:** This dataset contains population figures for all 628 cities in Washington State, based on the 2024 American Community Survey. Each record includes the city name and its population, allowing for comparisons across cities and regions. A key advantage of this dataset is that it reflects recent, up-to-date population information.
 
 ### Coding Notes
-
-**Coding Notes**
 
 **Google API:**
 
@@ -130,7 +129,7 @@ Some areas have lots of bus stops and vanpools, while others have very few. By l
 
 **Conclusion** We started this project with Vanpool data that piqued our interest. This data was extensive and covered a large portion of King County, and our first instinct was to figure out why people would be more inclined to carpool to work instead of using public transportation. Our first hypothesis was that people used vanpools in areas that didn’t have a good transit score, meaning places with fewer bus stops per capita. That led us to our first question: how does the total number of stops and vanpool rides within a city relate to the population of that city? This is where we realized our first major takeaway: a higher population count didn’t necessarily mean a larger discrepancy in vanpool rides and bus stops.In this instance it wasn’t that our assumptions were wrong but they were challenged. We noticed that places like Lakewood, which had a higher population, could have a smaller number of stops compared to other cities. 
 
-Our second takeaway was understanding that the calculation for transit score could involve many different aspects that we might not have included. This made us realize that the data we have gathered could be expanded even further to give us a more accurate understanding of the transit score, where factors like degrees of proximity within a location could have added effects on the transit score. This was relevant when using population data to understand the number of bus stops and vanpools per capita. We honestly think we made a good estimation of the transit score based on the datasets we had; however, we understand that there are areas where this could be made more accurate to reflect regional discrepancies we might have overlooked. For example, we created a visualization showing how many bus stops are within 500m of each vanpool origin, but we decided to keep this as a standalone graph.We did this because just having a high number of stops nearby doesn’t guarantee those routes actually go where people need to be. Instead of forcing a potentially misleading number into our final transit score, we used that map to supplement the score by establishing "Transit Accessibility" as its own category.
+Our second takeaway was understanding that the calculation for transit score could involve many different aspects that we might not have included. This made us realize that the data we have gathered could be expanded even further to give us a more accurate understanding of the transit score, where factors like degrees of proximity within a location could have added effects on the transit score. This was relevant when using population data to understand the number of bus stops and vanpools per capita. We honestly think we made a good estimation of the transit score based on the datasets we had; however, we understand that there are areas where this could be made more accurate to reflect regional discrepancies we might have overlooked. For example, we created a visualization showing how many bus stops are within 500m of each vanpool origin, but we decided to keep this as a standalone graph.We did this because just having a high number of stops nearby doesn’t guarantee those routes actually go where people need to be. Instead of forcing a potentially misleading number into our final transit score, we used that map to supplement the score by showing accessibility of bus stops around each van pool ride origin.
 
 Our final takeaway from this project was that, although some locations had a concentration of bus stops, they still experienced a substantial number of vanpool rides. We concluded that this could be because, while we are measuring all bus stops within a given area on the map, we are not taking into account the route of individual buses. This could mean that around a vanpool origin, there are significantly fewer bus stops that are relevant to our project because they don’t travel toward areas where vanpool rides stop. 
 
@@ -230,7 +229,7 @@ leaflet() %>%
 ```{r}
 #| title: Transit and Vanpool Score by city
 
-populationcensus <- read.csv("data/Washington_DemographicsByCityProcessed.csv")
+populationcensus <- read.csv("Data/Washington_DemographicsByCityProcessed.csv")
 
 # get just the city names
 populationcensus <- populationcensus |>
