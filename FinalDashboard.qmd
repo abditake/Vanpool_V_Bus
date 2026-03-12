@@ -176,23 +176,27 @@ leaflet() %>%
   addProviderTiles(providers$CartoDB.DarkMatter) %>%
   
   # formats the space for the graph to be in full view
+  # The blend mode screen part makes it easier to see the dots when they are on top of each other
   htmlwidgets::prependContent(htmltools::tags$style(".leaflet-pane svg path { mix-blend-mode: screen; }")) %>%
   setView(lng = -122.2, lat = 47.66, zoom = 9.6) %>%
   
-  
+  # The functions that start with addCircles dont change size when the map zooms
+  # To have it zoom with the map use AddCircleMarkers,but radius will be in terms of pixels
+  # For addCircles the radius is in meters
   addCircles(
     data = mapBus,
-    radius = 40, color = "#742dfc", 
-    stroke = FALSE, fillOpacity = 0.3,
+    radius = 55,
+    color = "#742dfc", 
+    stroke = FALSE, fillOpacity = 0.625,
     group = "Bus Data"
   ) %>%
   
-  addCircleMarkers(
+  addCircles(
     data = mapPool,
-    radius = 6,         
+    radius = 100,         
     color = "#d19d00",    
     fillOpacity = 0.8,
-    stroke = TRUE, weight = 1,
+    stroke = FALSE,
     label = ~paste("City:", City),
     group = "Vanpool Data"
   ) %>%
