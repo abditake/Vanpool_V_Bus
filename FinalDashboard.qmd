@@ -5,6 +5,7 @@ format:
   dashboard:
     theme: sandstone
     embed-resources: true
+    output-file: "index.html"
 ---
 
 ```{r}
@@ -12,15 +13,16 @@ format:
 # loading libraries
 library(plotly)
 library(dplyr)
+library(sf)
 library(tidyverse)
 library(jsonlite)
 library(leaflet)
 
 
 # Settting up the data
-vanpool_df <- read.csv("../data/Vanpool.csv")
+vanpool_df <- read.csv("data/Vanpool.csv")
 
-bus_df <- fromJSON("../data/gtfs_results.json")
+bus_df <- fromJSON("data/gtfs_results.json")
 
 vanpool_city <- vanpool_df |>
   mutate(
@@ -118,11 +120,17 @@ Some areas have lots of bus stops and vanpools, while others have very few. By l
 
 -   We learned how to use this by searching up how to use log scale for ggplot graphs
 
+**Simple features:**
+
+-   We used the sf library to actually calculate the distance between vanpool spots and bus stops. We turned our coordinates into spatial objects and created a 500m "buffer" around each point to see what was nearby. I don’t think we went over this library in class, but it was the only way to move past just looking at dots on a map and actually get a count of the bus stop density for each location.
+
+-   we learned how to use this using the documentation on https://github.com/rstudio/cheatsheets/blob/main/sf.pdf
+
 ### Conclusion
 
 **Conclusion** We started this project with Vanpool data that piqued our interest. This data was extensive and covered a large portion of King County, and our first instinct was to figure out why people would be more inclined to carpool to work instead of using public transportation. Our first hypothesis was that people used vanpools in areas that didn’t have a good transit score, meaning places with fewer bus stops per capita. That led us to our first question: how does the total number of stops and vanpool rides within a city relate to the population of that city? This is where we realized our first major takeaway: a higher population count didn’t necessarily mean a larger discrepancy in vanpool rides and bus stops.In this instance it wasn’t that our assumptions were wrong but they were challenged. We noticed that places like Lakewood, which had a higher population, could have a smaller number of stops compared to other cities. 
 
-Our second takeaway was understanding that the calculation for transit score could involve many different aspects that we might not have included. This made us realize that the data we have gathered could be expanded even further to give us a more accurate understanding of the transit score, where factors like degrees of proximity within a location could have added effects on the transit score. This was relevant when using population data to understand the number of bus stops and vanpools per capita. We honestly think we made a good estimation of the transit score based on the datasets we had; however, we understand that there are areas where this could be made more accurate to reflect regional discrepancies we might have overlooked.
+Our second takeaway was understanding that the calculation for transit score could involve many different aspects that we might not have included. This made us realize that the data we have gathered could be expanded even further to give us a more accurate understanding of the transit score, where factors like degrees of proximity within a location could have added effects on the transit score. This was relevant when using population data to understand the number of bus stops and vanpools per capita. We honestly think we made a good estimation of the transit score based on the datasets we had; however, we understand that there are areas where this could be made more accurate to reflect regional discrepancies we might have overlooked. For example, we created a visualization showing how many bus stops are within 500m of each vanpool origin, but we decided to keep this as a standalone graph.We did this because just having a high number of stops nearby doesn’t guarantee those routes actually go where people need to be. Instead of forcing a potentially misleading number into our final transit score, we used that map to supplement the score by establishing "Transit Accessibility" as its own category.
 
 Our final takeaway from this project was that, although some locations had a concentration of bus stops, they still experienced a substantial number of vanpool rides. We concluded that this could be because, while we are measuring all bus stops within a given area on the map, we are not taking into account the route of individual buses. This could mean that around a vanpool origin, there are significantly fewer bus stops that are relevant to our project because they don’t travel toward areas where vanpool rides stop. 
 
@@ -130,7 +138,7 @@ One thing to note is that we may be underestimating cities with low populations.
 
 For our first big-picture question, our map showed us that as we move out of areas that are concentrated with a large number of bus stops we notice a higher concentration of vanpool rides. In our second big-picture question, through the scatter-plot, we confirmed our initial assumptions that places with higher bus scores would have lower vanpool rides per capita. Lastly, when comparing the total number of stops and vanpool rides to a city's given population we discovered that cities with a higher population would have higher amounts of vanpool rides and bus stops, which is what we also initially predicted.
 
-For the future direction of this project, because we also have data of Vanpool trips’ endpoints, it would be helpful to utilize that data to show both Vanpool routes and bus routes, and compare them. This could better help us understand the reason people use Vanpools in areas (perhaps the bus routes in an area do not go towards important areas).
+For the future direction of this project, because we also have data of Vanpool trips’ endpoints, it would be helpful to utilize that data to show both Vanpool routes and bus routes, and compare them.This could better help us understand the reason people use Vanpools in areas (perhaps the bus routes in an area do not go towards important areas).
 
 # Map {orientation="columns"}
 
@@ -138,9 +146,11 @@ For the future direction of this project, because we also have data of Vanpool t
 
 **Where are vanpools and bus stops most concentrated across King County?** We answer this question through an interactive map that shows where Vanpool trip starting locations (Yellow) and bus stop locations (Purple) are located across the Puget Sounds. We used complementary colors to make the distinction easy to see. From this map, we can see that most Vanpool trips start outside of Seattle, and that many bus stops are concentrated in downtown Seattle.
 
+
 ## Column {width="75%"}
 
 ```{r}
+#| title: Heatmap of Bus Stops at Vanpool Starting Points
 ### data frame for plotting vanpool and bus data
 mapPool <- vanpool_df %>% 
   filter(Origin_Des != "Destination") |>
@@ -156,16 +166,6 @@ mapBus <- bus_df %>%
   select(Latitude = stop_lat, Longitude = stop_lon, type, City = city_name)
 
 
-mergedMap <- bind_rows(mapPool, mapBus)
-
-
-# Map logic
-htmltools::tags$style(
-  ".leaflet-pane svg path { 
-     mix-blend-mode: screen; 
-  }"
-)
-
 pal <- colorFactor(
   palette = c("#742dfc", "#d19d00"), 
   levels = c("bus", "vanpool")
@@ -174,44 +174,39 @@ pal <- colorFactor(
 leaflet() %>%
   # the below line changes the map's theme to look dark
   addProviderTiles(providers$CartoDB.DarkMatter) %>%
-  setView(lng = -122.25, lat = 47.6511, zoom = 9.75) %>%
+  
+  # formats the space for the graph to be in full view
+  htmlwidgets::prependContent(htmltools::tags$style(".leaflet-pane svg path { mix-blend-mode: screen; }")) %>%
+  setView(lng = -122.2, lat = 47.66, zoom = 9.6) %>%
+  
   
   addCircles(
-    data = mergedMap %>% filter(type == "bus"),
-    radius = 200, color = "#742dfc", 
-    group = "Big Circles",
-    fillOpacity = 0.05, stroke = FALSE
-  ) %>%
-  addCircles(
-    data = mergedMap %>% filter(type == "vanpool"),
-    radius = 250, color = "#d19d00", 
-    group = "Big Circles",
-    fillOpacity = 0.15, stroke = FALSE
+    data = mapBus,
+    radius = 40, color = "#742dfc", 
+    stroke = FALSE, fillOpacity = 0.3,
+    group = "Bus Data"
   ) %>%
   
-  addCircles(
-    data = mergedMap %>% filter(type == "bus"),
-    radius = 75, color = "#742dfc", 
-    group = "Small Circles",
-    fillOpacity = 0.1, stroke = FALSE
-  ) %>%
-  addCircles(
-    data = mergedMap %>% filter(type == "vanpool"),
-    radius = 125, color = "#d19d00", 
-    group = "Small Circles",
-    fillOpacity = 0.25, stroke = FALSE
+  addCircleMarkers(
+    data = mapPool,
+    radius = 6,         
+    color = "#d19d00",    
+    fillOpacity = 0.8,
+    stroke = TRUE, weight = 1,
+    label = ~paste("City:", City),
+    group = "Vanpool Data"
   ) %>%
   
   addLayersControl(
-    baseGroups = c("Big Circles", "Small Circles"),
+    overlayGroups = c("Vanpool Data", "Bus Data"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
   
   addLegend(
     position = "bottomright",
-    pal = pal, 
-    values = c("bus", "vanpool"),
-    title = "Transit Type"
+    colors = c("#742dfc", "#d19d00"),
+    labels = c("Bus Stops", "Vanpool Locations"),
+    title = "Transit Layers"
   )
   
 
@@ -224,11 +219,14 @@ leaflet() %>%
 
 **How does the number of bus stops per capita in a city relate to vanpool usage per capita?** We answer this question through a scatterplot with the two axis being Bus Score and Vanpool Score. Each city's bus score is calculated by dividing its total bus stops by its population so that we have a value for bus stops per capita. Once we have that for each city, we find the maximum value out of all the cities, then calculate a new value called bus score by dividing that city's bus stops per capita by the maximum bus stops per capita that was found. In summary, the bus score is a normalized bus stops per capita for each city. Vanpool score is the same, but for Vanpools. The scatterplot makes it easy to see the relation between the two scores. In the scatterplot we can see that there is a trend that cities with higher vanpool scores generally are in the lower half of bus stop scores.
 
-## Column {width="70%"}
+**Supplmental graph: Access Map** This visualization serves as a deeper dive into our main research question by showing exactly how many bus stops are within a 500-meter radius of each vanpool origin. While our transit score looks at city-wide averages, this map provides an estimated accessibility for riders.
+
+## Column {.tabset}
 
 ```{r}
+#| title: Transit and Vanpool Score by city
 
-populationcensus <- read.csv("../data/Washington_DemographicsByCityProcessed.csv")
+populationcensus <- read.csv("data/Washington_DemographicsByCityProcessed.csv")
 
 # get just the city names
 populationcensus <- populationcensus |>
@@ -283,7 +281,50 @@ ggplotly(corr_plot, tooltip = c("text", "x", "y", "size"))
 
 
 ```
+### Access Map
+```{r}
+#| title: Bus Stop Density within 500m of Vanpool Origins
 
+# change vanpool and bus coordinates to sf objects
+vanpool_sf <- st_as_sf(mapPool, coords = c("Longitude", "Latitude"), crs = 4326)
+bus_sf <- st_as_sf(mapBus, coords = c("Longitude", "Latitude"), crs = 4326)
+
+# converting coordinates from degrees to meters for spatial analysis
+vanpool_meters <- st_transform(vanpool_sf, 2285)
+bus_meters <- st_transform(bus_sf, 2285)
+
+
+# calculate the intersections
+bus_counts <- st_intersects(st_buffer(vanpool_meters, 500), bus_meters)
+
+vanpool_with_counts <- vanpool_sf %>%
+  mutate(bus_count = lengths(bus_counts))
+
+
+pal <- colorNumeric(palette = "viridis", domain = vanpool_with_counts$bus_count)
+
+leaflet(vanpool_with_counts) %>%
+  addProviderTiles(providers$CartoDB.DarkMatter) %>%
+  setView(lng = -122.2, lat = 47.66, zoom = 9.6) %>%
+  addCircleMarkers(
+    # added sqrt to prevent massive circles in downtown Seattle
+    radius = ~sqrt(bus_count + 1) * 2, 
+    color = ~pal(bus_count),
+    fillOpacity = 0.8,
+    stroke = TRUE,
+    weight = 1,
+    popup = ~paste0(
+      "City: ", City, " <br>",
+      "Bus Stops within 500m: ", bus_count
+    )
+  ) %>%
+  addLegend(
+    pal = pal, 
+    values = ~bus_count, 
+    title = "Nearby Bus Stops",
+    position = "bottomright"
+  )
+```
 # Population Comparisons
 
 ## Row {height="20%"}
