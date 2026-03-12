@@ -187,7 +187,7 @@ leaflet() %>%
     radius = 55,
     color = "#742dfc", 
     stroke = FALSE, fillOpacity = 0.625,
-    group = "Bus Data"
+    group = "Bus Stops"
   ) %>%
   
   addCircles(
@@ -197,11 +197,11 @@ leaflet() %>%
     fillOpacity = 0.8,
     stroke = FALSE,
     label = ~paste("City:", City),
-    group = "Vanpool Data"
+    group = "Vanpool Rides"
   ) %>%
   
   addLayersControl(
-    overlayGroups = c("Vanpool Data", "Bus Data"),
+    overlayGroups = c("Vanpool Rides", "Bus Stops"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
   
